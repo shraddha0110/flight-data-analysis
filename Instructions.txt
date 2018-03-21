@@ -1,0 +1,51 @@
+Instructions to run the AMI:
+---------------------------------------------------------------------------------------------------------
+
+1. Go inside hadoop folder i.e. hadoop-2.7.2 using below command
+---------------------------------------------------------------------------------------------------------
+$ cd hadoop-2.7.2
+
+2. Then format the Name node created in first Part use the following command at Name Node AMI:
+---------------------------------------------------------------------------------------------------------
+$ bin/hdfs namenode -format
+
+3. Then start the hdfs using below command:
+---------------------------------------------------------------------------------------------------------
+$ sbin/start-dfs.sh
+
+4. Then start the yarn using below command:
+---------------------------------------------------------------------------------------------------------
+$ sbin/start-yarn.sh
+
+5. Now all the nodes are running and we need to copy the input file to hdfs which can be done using the following commands:
+---------------------------------------------------------------------------------------------------------
+$ bin/hdfs dfs -mkdir /user
+$ bin/hdfs dfs -mkdir /user/hadoop
+$ bin/hdfs dfs -mkdir /user/hadoop/input
+
+$ bin/hdfs dfs -put /home/hduser/input/* /user/hadoop/input
+
+6. Now run the map-reduce job using following command:
+---------------------------------------------------------------------------------------------------------
+
+$ bin/hadoop jar /home/hduser/hadoop-2.7.2/BestAirline.jar BestAirline /user/hadoop/input output IND MDW
+
+7. To get the output use the below command:
+---------------------------------------------------------------------------------------------------------
+
+$ bin/hdfs dfs -get output output
+
+8. Now output will be exported in hadoop folder i.e. hadoop-2.7.2 so to view it use the following command:
+---------------------------------------------------------------------------------------------------------
+
+$ cat output/*
+
+Or simply to view the output in hdfs use the below command:
+
+$ bin/hdfs dfs -cat output/*
+
+9. When all process is done we should stop YARN and HDFS using the following commands:
+---------------------------------------------------------------------------------------------------------
+
+$ sbin/stop-yarn.sh
+$ sbin/stop-dfs.sh

@@ -1,0 +1,245 @@
+-----------------------------------------------------------------------------------------------------------------
+Step wise Instruction followed to run HADOOP 2.7.2 in distributed mode on UBUNTU Instance using 4 instances	|
+-----------------------------------------------------------------------------------------------------------------
+
+STEP 1: Creating Instances on Amazon:
+---------------------------------------------------
+Create 4 Ubuntu Instances in EC-2 of Amazon using a PEM key and assign it to a security group allowing all incoming traffic.
+
+STEP 2 : Connicting to Instances using MobaXterm Software:
+---------------------------------------------------
+First Convert the PEM key to PPK format using "puttygen" software.
+Than using the PPK file configure the mobaXterm software to connect to the respective instances per session.
+
+STEP 3 : Install Java in each instances (All 4 instances):
+---------------------------------------------------
+I used JAVA 8 so following are the commands to install JAVA 8:
+
+$ sudo add-apt-repository ppa:webupd8team/java
+$ sudo apt-get update
+$ sudo apt-get install oracle-java8-installer
+
+To Confirm the Java Installation and version check type the following command:
+
+$ java -version
+
+STEP 4 : CREATE A USER GROUP AND USER :
+---------------------------------------------------
+Create a user group "hadoop" using following command:
+
+$ sudo addgroup hadoop
+
+Create a user "hduser" and assign it to group "hadoop" and "sudo"
+
+$ sudo adduser --ingroup hadoop hduser
+$ sudo adduser hduser sudo
+
+STEP 5 : Now Login into the new user created :
+---------------------------------------------------
+Login into "hduser" using following command:
+
+$ su hduser
+
+enter the password that you entered at the time of user creation in STEP 4 above
+
+STEP 6 : Now configure /etc/hosts file :
+---------------------------------------------------
+Open /etc/hosts in vi editor using following command:
+
+$ sudo vi /etc/hosts
+
+Add the following details in the file in between local host and IPv6 Settings:
+
+Name_Node_private_IP 	MASTER
+Slave1_private_IP	SLAVE1
+Slave2_private_IP	SLAVE2
+Slave3_private_IP	SLAVE3
+
+STEP 7 : Lets Download Hadoop 2.7.2(Stable Release version) :
+---------------------------------------------------
+Lets download hadoop 2.7.2 which is latest stable release version using following command:
+
+$ wget https://dist.apache.org/repos/dist/release/hadoop/common/hadoop-2.7.2/hadoop-2.7.2.tar.gz
+
+Extract its contents using following command:
+
+$ tar -xvf hadoop-2.7.2.tar.gz
+
+STEP 8 : For Hadoop SSH connection lets create keys :
+---------------------------------------------------
+Generate Public and Private key for the master Node(Name Node) using RSA and with blank password:
+
+$ ssh-keygen -t rsa -P ''
+
+The keys are generated at .ssh folder so enter in .ssh folder and view the files:
+
+$ cd .ssh
+$ ls
+
+Here will see two files "id_rsa" which is private key and "id_rsa.pub" which is public key.
+
+Open contents of "id_ras.pub" using following command:
+
+$ cat id_rsa.pub
+
+copy and paste its contents in authorized_keys file of all 4 clusters/nodes :
+
+$ vi authorized_keys
+
+The ".ssh" folder is not present in other 3 slave nodes so first make that folder using below command:
+
+$ mkdir .ssh
+
+In it create the authorized_keys same as master and paste the id_rsa.pub contents.
+
+STEP 9 : TEST FOR SSH Connection between nodes:
+---------------------------------------------------
+From Master try SSH connection to other three slave nodes using following format:
+
+$ ssh private_ip_of_node
+
+for example to connect to node with private ip 172.31.33.128 we will connect as:
+
+$ ssh 172.31.33.128
+
+STEP 10 : Changing Configuration files of HADOOP :
+---------------------------------------------------
+To change configuration variable go into folder /hadoop-2.7.2/etc/hadoop/
+---------------------
+(a) hadoop-env.sh:  |
+---------------------
+First specify the Java Path in "hadoop-env.sh" :
+
+export JAVA_HOME=/usr/lib/jvm/java-8-oracle
+
+---------------------
+(b) core-site.xml:  |
+---------------------
+Open the file using command:
+
+$ vi core-site.xml
+
+Add the following property under "configuration" tag :
+
+<property>
+<name>fs:defaultFS</name>
+<value>hdfs://MASTER:9000</value>
+</property>
+
+--------------------
+(c) yarn-site.xml  |
+--------------------
+Open the file using command:
+
+$ vi yarn-site.xml
+
+Add the following property under "configuration" tag :
+
+<property>
+<name>yarn.resourcemanager.hostname</name>
+<value>MASTER</value>
+</property>
+
+<property>
+<name>yarn.nodemanager.aux-services</name>
+<value>mapreduce_shuffle</value>
+</property>
+
+--------------------
+(d) hdfs-site.xml  |
+--------------------
+Open the file using command:
+
+$ vi hdfs-site.xml
+
+Add the following property under "configuration" tag :
+
+<property>
+<name>dfs.replication</name>
+<value>3</value>
+</property>
+
+<property>
+<name>dfs.namenode.name.dir</name>
+<value>file:/home/hduser/hadoop-2.7.2/hdfs/namenode</value>
+</property>
+
+<property>
+<name>dfs.datanode.data.dir</name>
+<value>file:/home/hduser/hadoop-2.7.2/hdfs/datanode</value>
+</property>
+
+The path specified are not present so we need to create them on respective nodes using following commands:
+
+$ mkdir -p /home/hduser/hadoop-2.7.2/hdfs/namenode
+
+$ mkdir -p /home/hduser/hadoop-2.7.2/hdfs/datanode
+
+$ chmod 755 /home/hduser/hadoop-2.7.2/hdfs/datanode
+
+-----------------------
+(e) mapred-site.xml:  |
+-----------------------
+This file is available as a template file so first we need to convert it:
+
+$ mv mapred-site.xml.template mapred-site.xml
+
+Open the file using command:
+
+$ vi mapred-site.xml
+
+Add the following property under "configuration" tag :
+
+<property>
+<name>mapreduce.framework.name</name>
+<value>yarn</value>
+</property>
+
+--------------
+(f) slaves:  |
+--------------
+Specify the slave nodes here:
+
+$ vi slaves
+
+in that delete the already existing localnode and post the following in it:
+
+SLAVE1
+SLAVE2
+SLAVE3
+
+STEP 11 : Now Copy all this file to slave nodes:
+---------------------------------------------------
+Suppose first slave nodes private ip is : 172.31.33.128
+
+Than first go inside /hadoop-2.7.2/etc/hadoop folder and than use below command to send it on above ip:
+
+# scp hadoop-env.sh core-site.xml hdfs-site.xml yarn-site.xml mapred-site.xml slaves 172.31.33.128:/home/hduser/hadoop-2.7.2/etc/hadoop
+
+STEP 12 : Now we are ready to run HADOOP in DISTRIBUTED MODE :
+---------------------------------------------------
+To Format the Name Node(MASTER):
+
+$ bin/hdfs namenode -format
+
+Than Start the HDFS at Name Node(MASTER):
+
+$ sbin/start-dfs.sh
+
+Than Start YARN at Name Node(MASTER):
+
+$ sbin/start-yarn.sh
+
+STEP 13 : To Stop all Services :
+---------------------------------------------------
+To Stop yarn use the following command:
+
+$ sbin/stop-yarn.sh
+
+To Stop HDFS use the following command:
+
+$sbin/stop-dfs.sh
+
+-----------------------------------------------------------------------------------------------------------------
+END OF INSTRUCTIONS												|
+-----------------------------------------------------------------------------------------------------------------
